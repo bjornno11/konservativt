@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Til godkjenning</h1>
+
+{% if pendings %}
+  <form method="post" action="{% url 'members:approve-bulk' %}">
+    {% csrf_token %}
+    <table border="1" cellpadding="6" cellspacing="0">
+      <tr>
+        <th></th>
+        <th>Navn</th>
+        <th>Telefon</th>
+        <th>Kommune</th>
+        <th>Handling</th>
+      </tr>
+      {% for m in pendings %}
+        <tr>
+          <td><input type="checkbox" name="ids" value="{{ m.id }}"></td>
+          <td><a href="{% url 'members:detail' m.id %}">{{ m.fornavn }} {{ m.etternavn }}</a></td>
+          <td>{{ m.telefon }}</td>
+          <td>{{ m.kommune }}</td>
+          <td>
+            <form method="post" action="{% url 'members:approve' m.id %}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{% url 'members:pending' %}">
+              <button type="submit">Godkjenn</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+    <p><button type="submit">Godkjenn valgte</button></p>
+  </form>
+
+  {# Paginering, hvis aktivert i viewet #}
+  {% if is_paginated %}
+    <p>
+      {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">« Forrige</a>{% endif %}
+      Side {{ page_obj.number }} av {{ page_obj.paginator.num_pages }}
+      {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Neste »</a>{% endif %}
+    </p>
+  {% endif %}
+{% else %}
+  <p><em>Ingen selvregistreringer til godkjenning.</em></p>
+{% endif %}
+{% endblock %}

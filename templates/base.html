@@ -1,0 +1,57 @@
+{% load static %}
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Konservativt{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/site.css' %}?v=1">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__inner">
+    <a href="{% url 'docs:docs-list' %}" class="brand" aria-label="Forsiden">
+      <img src="{% static 'img/logo.png' %}" alt="Konservativt" height="32">
+      <span>Konservativt</span>
+    </a>
+
+    <nav class="navlinks" aria-label="Hovedmeny">
+      <a href="{% url 'docs:docs-list' %}">Dokumenter</a>
+      {% if user.is_authenticated %}
+        <a href="{% url 'members:list' %}">Medlemmer</a>
+        {% if user.is_staff or perms.members.approve_member %}
+          <a href="{% url 'members:pending' %}">Til godkjenning</a>
+        {% endif %}
+      {% endif %}
+    </nav>
+
+    <div class="spacer"></div>
+
+    {% if user.is_authenticated %}
+      <form method="post" action="{% url 'logout' %}" style="margin:0">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'login' %}">
+        <button type="submit" class="pill">Logg ut</button>
+      </form>
+    {% else %}
+      <a class="pill" href="{% url 'login' %}">Logg inn</a>
+    {% endif %}
+  </div>
+</header>
+
+<main class="main">
+  {% if messages %}
+    <div class="flash">
+      <ul style="margin:.2rem 0 .2rem 1rem;">
+        {% for m in messages %}<li>{{ m }}</li>{% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

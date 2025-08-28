@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ object.fornavn }} {{ object.etternavn }}</h1>
+
+<ul>
+  <li>Telefon: {{ object.telefon }}</li>
+  <li>E-post: {{ object.epost }}</li>
+  <li>Adresse: {{ object.adresse }}</li>
+  <li>
+    Kommune: {% if object.kommune %}{{ object.kommune.navn }}{% else %}(ukjent){% endif %}
+  </li>
+  <li>
+    Postnummer: {% if object.postnummer %}{{ object.postnummer.nummer }}{% else %}{{ object.postnr }}{% endif %}
+  </li>
+</ul>
+
+<p>
+  <a href="{% url 'members:list' %}">↩︎ Til liste</a> |
+  <a href="{% url 'members:edit' object.pk %}">✎ Rediger</a>
+</p>
+{% endblock %}
+
