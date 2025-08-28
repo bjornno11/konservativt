@@ -22,12 +22,8 @@ SECRET_KEY = os.getenv(
 )
 DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = [
-    h.strip() for h in os.getenv(
-        "DJANGO_ALLOWED_HOSTS",
-        "q1.no,www.q1.no,localhost,127.0.0.1"
-    ).split(",")
-]
+ALLOWED_HOSTS = ["q1.no", "www.q1.no", "127.0.0.1", "localhost"]
+CSRF_TRUSTED_ORIGINS = ["https://q1.no", "https://www.q1.no"]
 
 
 STATICFILES_DIRS = [
@@ -120,7 +116,7 @@ FORCE_SCRIPT_NAME = "/konservativt"
 # --- Static / Media ---
 STATIC_URL = "/konservativt/static/"
 MEDIA_URL = "/konservativt/media/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT = "/srv/konservativt/static/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # --- Proxy / sikkerhet ---
