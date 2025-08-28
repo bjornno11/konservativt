@@ -1,0 +1,63 @@
+# ---- Python ----
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+
+# ---- Virtualenv ----
+.venv/
+env/
+venv/
+
+# ---- Django ----
+*.sqlite3
+db.sqlite3
+/staticfiles/
+/media/
+/collectstatic/
+/*.log
+
+# ---- IDEer ----
+# VS Code
+.vscode/
+/.history
+.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+
+# ---- OS-filer ----
+.DS_Store
+Thumbs.db
+
+# ---- Backup/Temp ----
+*~
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# ---- Pip / Poetry / Package managers ----
+pip-log.txt
+pip-delete-this-directory.txt
+.poetry/
+__pypackages__/
+
+# ---- MyPy / Pytest / Coverage ----
+.mypy_cache/
+.dmypy.json
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ---- Jupyter ----
+.ipynb_checkpoints
+*.ipynb
+
+# ---- VS build caches ----
+*.egg-info/
+.eggs/
+dist/
+build/
