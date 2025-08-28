@@ -1,0 +1,173 @@
+
+{% extends "base.html" %}
+{% block content %}
+<h1>{% if object %}Rediger medlem{% else %}Nytt medlem{% endif %}</h1>
+
+<form method="post">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div style="color:#b00">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <fieldset>
+    <legend>Tilknytning</legend>
+
+    <p>
+      <label for="id_fylke">Fylke</label><br>
+      {{ form.fylke }}
+    </p>
+
+    <p>
+      <label for="id_kommune">Kommune</label><br>
+      {{ form.kommune }}
+    </p>
+
+    <p>
+      <label for="id_postnr_select">Bla i postnummer (for valgt kommune)</label><br>
+      <select id="id_postnr_select" size="6" style="min-width:16em;"></select>
+      <small>Klikk for å fylle feltet «Postnummer».</small>
+    </p>
+
+    <p>
+      <label for="id_lokallag">Lokallag (Ctrl/⌘ for flere)</label><br>
+      {{ form.lokallag }}
+    </p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Person</legend>
+    <p>{{ form.fornavn.label_tag }} {{ form.fornavn }}</p>
+    <p>{{ form.etternavn.label_tag }} {{ form.etternavn }}</p>
+    <p>{{ form.adresse.label_tag }} {{ form.adresse }}</p>
+    <p>{{ form.postnr.label_tag }} {{ form.postnr }}</p>
+    <p>{{ form.telefon.label_tag }} {{ form.telefon }}</p>
+    <p>{{ form.fodselsdato.label_tag }} {{ form.fodselsdato }}</p>
+    <p>{{ form.epost.label_tag }} {{ form.epost }}</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Verving</legend>
+    {% if user.is_authenticated %}
+      <p><strong>Vervet av:</strong> {{ user.get_full_name|default:user.username }} (id {{ user.id }})</p>
+      {{ form.verve_kilde }}  {# hidden via widget #}
+      {{ form.verver_navn }}  {# hidden via widget #}
+    {% else %}
+      <p>{{ form.verve_kilde.label_tag }} {{ form.verve_kilde }}</p>
+      <p>{{ form.verver_navn.label_tag }} {{ form.verver_navn }}</p>
+    {% endif %}
+
+  </fieldset>
+
+  <p>
+    <button type="submit">Lagre</button>
+    {% if object %}
+      <a href="{% url 'members:detail' object.pk %}">Avbryt</a>
+    {% else %}
+      <a href="{% url 'members:list' %}">Avbryt</a>
+    {% endif %}
+  </p>
+</form>
+
+<script>
+(function(){
+  const form       = document.querySelector('form');
+  const fylkeSel   = document.getElementById('id_fylke');
+  const kommuneSel = document.getElementById('id_kommune');
+  const lagSel     = document.getElementById('id_lokallag');
+  const postnrInp  = document.getElementById('id_postnr');
+  const postnrSel  = document.getElementById('id_postnr_select');
+
+  function toggleDisabled(){
+    const hasF = !!(fylkeSel && fylkeSel.value);
+    if (kommuneSel) kommuneSel.disabled = !hasF;
+    if (lagSel)     lagSel.disabled     = !hasF;
+  }
+
+  async function updateKommuner() {
+    if (!fylkeSel || !kommuneSel) return;
+    const f = fylkeSel.value || "";
+    const resp = await fetch("{% url 'members:hx-kommuner' %}?fylke=" + encodeURIComponent(f));
+    kommuneSel.innerHTML = await resp.text();
+    await updateLag();
+    await updatePostnrList();
+    toggleDisabled();
+  }
+
+  async function updateLag() {
+    if (!lagSel) return;
+    const f = fylkeSel ? (fylkeSel.value || "") : "";
+    const k = kommuneSel ? (kommuneSel.value || "") : "";
+
+    // Bevar tidligere valg
+    const previouslySelected = Array.from(lagSel.selectedOptions).map(o => o.value);
+
+    const url = "{% url 'members:hx-lokallag' %}?fylke=" + encodeURIComponent(f) + "&kommune=" + encodeURIComponent(k);
+    const resp = await fetch(url);
+    lagSel.innerHTML = await resp.text();
+
+    // Re-velg det som fortsatt finnes
+    if (previouslySelected.length){
+      for (const opt of lagSel.options){
+        if (previouslySelected.includes(opt.value)) opt.selected = true;
+      }
+    }
+  }
+
+  async function updatePostnrList() {
+    if (!postnrSel) return;
+    const k = kommuneSel ? (kommuneSel.value || "") : "";
+    if (!k) { postnrSel.innerHTML = ""; return; }
+    const resp = await fetch("{% url 'members:hx-postnummer' %}?kommune=" + encodeURIComponent(k));
+    postnrSel.innerHTML = await resp.text();
+  }
+
+  async function resolvePostnr() {
+    if (!postnrInp) return;
+    const nr = (postnrInp.value || "").trim();
+    if (!nr) return;
+    const resp = await fetch("{% url 'members:api-postnummer' %}?nr=" + encodeURIComponent(nr));
+    const data = await resp.json();
+    if (data.found) {
+      if (fylkeSel && data.fylke_id) {
+        fylkeSel.value = data.fylke_id;
+        await updateKommuner();
+      }
+      if (kommuneSel && data.kommune_id) {
+        kommuneSel.value = data.kommune_id;
+        await updateLag();
+        await updatePostnrList();
+      }
+    } else {
+      alert("Postnummeret finnes ikke i registeret.");
+    }
+  }
+
+  // ——— Events ———
+  if (fylkeSel)   fylkeSel.addEventListener('change', updateKommuner);
+  if (kommuneSel) kommuneSel.addEventListener('change', async () => {
+    await updateLag();
+    await updatePostnrList();
+  });
+  if (postnrInp)  postnrInp.addEventListener('blur', resolvePostnr);
+  if (postnrSel)  postnrSel.addEventListener('change', function(){
+    const val = postnrSel.value || "";
+    if (postnrInp && val) postnrInp.value = val;
+  });
+
+  // Aktiver disabled felter før submit slik at verdier blir POSTet
+  if (form) {
+    form.addEventListener('submit', function(){
+      if (kommuneSel) kommuneSel.disabled = false;
+      if (lagSel)     lagSel.disabled     = false;
+    });
+  }
+
+  // Init
+  toggleDisabled();
+  if (fylkeSel && fylkeSel.value) {
+    updateKommuner();
+  }
+})();
+</script>
+{% endblock %}

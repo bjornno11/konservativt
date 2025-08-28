@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Dokumenter</h1>
+<ul>
+  {% for d in docs %}
+    <li>
+      <a href="{% url 'docs:docs-detail' d.pk %}">{{ d.tittel }}</a>
+      – {{ d.folder.navn }}
+      – <a href="{% url 'docs:download' d.pk %}">Last ned</a>
+    </li>
+  {% empty %}
+    <li>Ingen dokumenter.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

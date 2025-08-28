@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Last opp dokument{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'docs:home' %}">← Tilbake til dokumenter</a></p>
+
+<h1>Last opp dokument</h1>
+
+<form method="post" enctype="multipart/form-data" style="max-width:720px;">
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div style="color:#b00020; margin:.5rem 0;">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  <p>
+    <label for="{{ form.folder.id_for_label }}"><strong>Mappe</strong></label><br>
+    {{ form.folder }}
+    <small>Kun mapper du har skrivetilgang til vises.</small>
+    {{ form.folder.errors }}
+  </p>
+
+  <p>
+    <label for="{{ form.tittel.id_for_label }}"><strong>Tittel</strong></label><br>
+    {{ form.tittel }}
+    {{ form.tittel.errors }}
+  </p>
+
+  <p>
+    <label for="{{ form.fil.id_for_label }}"><strong>Fil</strong></label><br>
+    {{ form.fil }}
+    <small>Maks ~50 MB (jfr. Nginx <code>client_max_body_size</code>).</small>
+    {{ form.fil.errors }}
+  </p>
+
+  <p>
+    <label for="{{ form.merknad.id_for_label }}"><strong>Merknad</strong></label><br>
+    {{ form.merknad }}
+    {{ form.merknad.errors }}
+  </p>
+
+  <button type="submit">Last opp</button>
+</form>
+{% endblock %}
+

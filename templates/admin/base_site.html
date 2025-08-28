@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+{% load static i18n %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    /* Gjør admin-header posisjonerbar */
+    #header { position: relative; }
+
+    /* Plasser logo nederst i midten av headeren */
+    #header .logo-center{
+      position: absolute;
+      left: 50%;
+      bottom: .35rem;          /* justér høyde */
+      transform: translateX(-50%);
+    }
+    #header .logo-center img{
+      height: 28px;            /* justér størrelse */
+      display: block;
+    }
+
+    /* Liten skjerm: litt mindre logo */
+    @media (max-width: 720px){
+      #header .logo-center img{ height: 22px; }
+    }
+  </style>
+{% endblock %}
+
+{% block branding %}
+  <h1 id="site-name">
+    <a href="{% url 'admin:index' %}">Konservativt admin</a>
+  </h1>
+<!-- admin-fingerprint v1 -->
+
+
+  <!-- Logo nederst i midten -->
+  <a href="{% url 'admin:index' %}" class="logo-center" aria-label="Forsiden">
+    <img src="{% static 'img/logo.png' %}" alt="Konservativt">
+  </a>
+{% endblock %}
+
+{% block userlinks %}
+  {% if has_permission %}
+    <a href="{% url 'admin:password_change' %}">{% translate 'Change password' %}</a>
+    /
+    <form method="post" action="{% url 'logout' %}" style="display:inline;">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{% url 'admin:index' %}">
+      <button type="submit" class="button" style="background:none;border:none;padding:0;margin:0;font:inherit;text-decoration:underline;cursor:pointer;">
+        {% translate 'Log out' %}
+      </button>
+    </form>
+  {% endif %}
+{% endblock %}

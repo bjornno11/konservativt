@@ -1,0 +1,166 @@
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views import View
+from django.views.generic import ListView, CreateView, DetailView, UpdateView
+from django.urls import reverse_lazy
+from django.http import HttpResponse, JsonResponse
+from django.db.models import Q
+from django.shortcuts import redirect
+from .models import Medlem, Lokallag
+from .forms import MedlemForm
+from geo.models import Fylke, Kommune, Postnummer
+from django.views.decorators.http import require_GET
+from django.utils.decorators import method_decorator
+
+
+# --------- CRUD for medlemmer ---------
+
+class MemberList(LoginRequiredMixin, ListView):
+    model = Medlem
+    template_name = "members/list.html"
+    context_object_name = "members"
+    paginate_by = 25
+
+    def get_queryset(self):
+        qs = super().get_queryset().select_related("kommune", "postnummer")
+        q = self.request.GET.get("q")
+        if q:
+            qs = qs.filter(
+                Q(fornavn__icontains=q) |
+                Q(etternavn__icontains=q) |
+                Q(telefon__icontains=q) |
+                Q(epost__icontains=q)
+            )
+        return qs.order_by("etternavn", "fornavn")
+
+class MemberCreate(LoginRequiredMixin, CreateView):
+    model = Medlem
+    form_class = MedlemForm
+    template_name = "members/form.html"
+    success_url = reverse_lazy("members:list")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["request"] = self.request    # ← gi formen request
+        return kwargs
+
+    def form_valid(self, form):
+        # VIKTIG: bruk vår form.save (den håndterer postnr + M2M-logikk)
+        self.object = form.save(request=self.request)
+
+        # Belt & seler: sørg for at lokallag fra POST alltid blir lagret
+        ids = [int(x) for x in self.request.POST.getlist("lokallag") if str(x).isdigit()]
+        if ids:
+            eksisterende = set(Medlemskap.objects.filter(medlem=self.object).values_list("lokallag_id", flat=True))
+            to_add = set(ids) - eksisterende
+            if to_add:
+                Medlemskap.objects.bulk_create(
+                    [Medlemskap(medlem=self.object, lokallag_id=i) for i in to_add],
+                    ignore_conflicts=True,
+                )
+        return redirect(self.get_success_url())
+
+
+class MemberUpdate(LoginRequiredMixin, UpdateView):
+    model = Medlem
+    form_class = MedlemForm
+    template_name = "members/form.html"
+    success_url = reverse_lazy("members:list")
+
+    def form_valid(self, form):
+        self.object = form.save(request=self.request)
+
+        # Belt & seler: synk lokallag fra POST
+        ids = [int(x) for x in self.request.POST.getlist("lokallag") if str(x).isdigit()]
+        ønskede = set(ids)
+        nåværende = set(Medlemskap.objects.filter(medlem=self.object).values_list("lokallag_id", flat=True))
+
+        slett = nåværende - ønskede
+        if slett:
+            Medlemskap.objects.filter(medlem=self.object, lokallag_id__in=slett).delete()
+
+        add = ønskede - nåværende
+        if add:
+            Medlemskap.objects.bulk_create(
+                [Medlemskap(medlem=self.object, lokallag_id=i) for i in add],
+                ignore_conflicts=True,
+            )
+        return redirect(self.get_success_url())
+
+class MemberDetail(LoginRequiredMixin, DetailView):
+    model = Medlem
+    template_name = "members/detail.html"
+    context_object_name = "member"
+
+
+# --------- Hjelpe-endepunkter til skjema (åpne, kun GET) ---------
+
+class HxKommuner(View):
+    http_method_names = ["get"]
+    def get(self, request):
+        fylke_id = request.GET.get("fylke")
+        qs = Kommune.objects.all().order_by("navn")
+        if fylke_id:
+            qs = qs.filter(fylke_id=fylke_id)
+        options = "".join(f'<option value="{k.pk}">{k.navn}</option>' for k in qs)
+        return HttpResponse(options or '<option value="">(Ingen kommuner)</option>')
+
+
+class HxLokallag(View):
+    http_method_names = ["get"]
+    def get(self, request):
+        fylke_id = request.GET.get("fylke")
+        kommune_id = request.GET.get("kommune")
+        qs = Lokallag.objects.all().order_by("navn")
+        if fylke_id:
+            qs = qs.filter(fylke_id=fylke_id)
+        if kommune_id:
+            qs = qs.filter(kommune_id=kommune_id)
+        options = "".join(f'<option value="{l.pk}">{l.navn}</option>' for l in qs)
+        return HttpResponse(options or '<option value="">(Ingen lag)</option>')
+
+
+class ApiPostnummer(View):
+    http_method_names = ["get"]
+    def get(self, request):
+        nr = (request.GET.get("nr") or "").strip().zfill(4)
+        pn = Postnummer.objects.filter(nummer=nr).first()
+        if not pn:
+            return JsonResponse({"found": False})
+        pk = pn.kommuner.filter(primar=True).select_related("kommune__fylke").first() \
+            or pn.kommuner.select_related("kommune__fylke").first()
+        if not pk:
+            return JsonResponse({"found": True})
+        k = pk.kommune
+        return JsonResponse({
+            "found": True,
+            "kommune_id": k.id,
+            "kommune_navn": k.navn,
+            "kommune_nr": k.nummer,
+            "fylke_id": k.fylke_id,
+            "fylke_navn": k.fylke.navn,
+        })
+
+@method_decorator(require_GET, name="dispatch")
+class HxPostnummer(View):
+    """
+    Returnerer <option value="NNNN">NNNN – POSTSTED</option> for valgt kommune.
+    Bruker Postnummer -> (reverse) .kommuner for å finne postnummer i kommunen.
+    """
+    def get(self, request):
+        kommune_id = request.GET.get("kommune")
+        qs = Postnummer.objects.all()
+        if kommune_id:
+            qs = qs.filter(kommuner__kommune_id=kommune_id)
+        qs = qs.distinct().order_by("nummer")
+
+        def label(p):
+            navn = getattr(p, "navn", None) or getattr(p, "poststed", None) or ""
+            return f"{p.nummer} – {navn}" if navn else p.nummer
+
+        # (valgfritt) beskyttelse mot altfor lange lister
+        options = "".join(
+            f'<option value="{p.nummer}">{label(p)}</option>'
+            for p in qs[:1000]
+        )
+        return HttpResponse(options or '<option value="">(Ingen postnummer)</option>')

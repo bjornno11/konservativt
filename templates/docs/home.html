@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Dokumenter{% endblock %}
+
+{% block content %}
+<h1>Dokumenter</h1>
+
+<form method="get" style="margin-bottom:1rem;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Søk i titler…" />
+  <button type="submit">Søk</button>
+  <a href="{% url 'docs:upload' %}" style="margin-left:1rem;">Last opp</a>
+</form>
+
+<h2>Mapper</h2>
+<ul>
+  {% for f in folders %}
+    <li><a href="{% url 'docs:folder' f.id %}">{{ f.navn }}</a>{% if f.beskrivelse %} – {{ f.beskrivelse }}{% endif %}</li>
+  {% empty %}
+    <li>Ingen mapper tilgjengelig. Opprett i admin og/eller tildel rettigheter.</li>
+  {% endfor %}
+</ul>
+
+<h2 style="margin-top:1.5rem;">Siste dokumenter</h2>
+{% if docs %}
+  <table style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="text-align:left; border-bottom:1px solid #ddd; padding:.4rem;">Tittel</th>
+        <th style="text-align:left; border-bottom:1px solid #ddd; padding:.4rem;">Mappe</th>
+        <th style="text-align:left; border-bottom:1px solid #ddd; padding:.4rem;">Dato</th>
+        <th style="text-align:left; border-bottom:1px solid #ddd; padding:.4rem;">Handling</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in docs %}
+        <tr>
+          <td style="padding:.4rem;">{{ d.tittel }}</td>
+          <td style="padding:.4rem;"><a href="{% url 'docs:folder' d.folder.id %}">{{ d.folder.navn }}</a></td>
+          <td style="padding:.4rem;">{{ d.opprettet|date:"Y-m-d H:i" }}</td>
+          <td style="padding:.4rem;"><a href="{% url 'docs:download' d.id %}">Last ned</a></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>Ingen dokumenter funnet.</p>
+{% endif %}
+{% endblock %}

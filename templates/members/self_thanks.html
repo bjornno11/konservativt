@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<div style="max-width:720px;margin:0 auto;padding:1rem;">
+  <h1>Takk for registreringen!</h1>
+  <p>Vi har mottatt opplysningene dine. En ansvarlig vil godkjenne registreringen snart.</p>
+  <p><a href="{% url 'docs:docs-list' %}">Til forsiden</a></p>
+</div>
+{% endblock %}

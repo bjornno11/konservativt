@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block content %}
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  .card { max-width: 720px; margin: 0 auto; padding: 1rem; }
+  form { display: grid; gap: .9rem; }
+  .row { display: grid; gap: .6rem; grid-template-columns: 1fr; }
+  @media (min-width: 640px) {
+    .row-2 { grid-template-columns: 1fr 1fr; }
+    .row-3 { grid-template-columns: 1fr 1fr 1fr; }
+  }
+  label { font-weight: 600; }
+  select, input { width: 100%; max-width: 100%; }
+  .hint { color: #666; font-size: .9rem; }
+  .actions { display: flex; gap: .75rem; align-items: center; }
+  .btn { padding: .6rem 1rem; border: 1px solid #ccc; background: #f5f5f5; cursor: pointer; }
+</style>
+
+<div class="card">
+  <h1>Bli medlem</h1>
+  <p class="hint">Fyll ut feltene under. Navn, telefon og postnummer er påkrevd.</p>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {{ form.hp_website }} {# honeypot #}
+
+    <div class="row row-2">
+      <div>
+        <label for="id_fornavn">Fornavn*</label>
+        {{ form.fornavn }}
+      </div>
+      <div>
+        <label for="id_etternavn">Etternavn*</label>
+        {{ form.etternavn }}
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="id_telefon">Telefon*</label>
+        {{ form.telefon }}
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="id_epost">E-post</label>
+        {{ form.epost }}
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="id_adresse">Adresse</label>
+        {{ form.adresse }}
+      </div>
+    </div>
+
+    <div class="row row-3">
+      <div>
+        <label for="id_postnr">Postnummer*</label>
+        {{ form.postnr }}
+        <div class="hint">Vi slår opp kommune/fylke automatisk.</div>
+      </div>
+      <div>
+        <label for="id_fylke">Fylke</label>
+        {{ form.fylke }}
+      </div>
+      <div>
+        <label for="id_kommune">Kommune</label>
+        {{ form.kommune }}
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="id_lokallag">Lokallag (valgfritt)</label>
+        {{ form.lokallag }}
+        <div class="hint">Velg gjerne lag hvis du ser ditt.</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="id_fodselsdato">Fødselsdato</label>
+        {{ form.fodselsdato }}
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" type="submit">Send inn</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  const fylkeSel   = document.getElementById('id_fylke');
+  const kommuneSel = document.getElementById('id_kommune');
+  const lagSel     = document.getElementById('id_lokallag');
+  const postnrInp  = document.getElementById('id_postnr');
+  const form       = document.querySelector('form');
+
+  function toggleDisabled(){
+    const hasF = !!(fylkeSel && fylkeSel.value);
+    if (kommuneSel) kommuneSel.disabled = !hasF;
+    if (lagSel)     lagSel.disabled     = !hasF;
+  }
+  toggleDisabled();
+
+  async function updateKommuner() {
+    if (!fylkeSel || !kommuneSel) return;
+    const f = fylkeSel.value || "";
+    const resp = await fetch("{% url 'members:hx-kommuner' %}?fylke=" + encodeURIComponent(f));
+    kommuneSel.innerHTML = await resp.text();
+    kommuneSel.value = "";
+    await updateLag();
+    toggleDisabled();
+  }
+
+  async function updateLag() {
+    if (!lagSel) return;
+    const f = fylkeSel ? (fylkeSel.value || "") : "";
+    const k = kommuneSel ? (kommuneSel.value || "") : "";
+    const url = "{% url 'members:hx-lokallag' %}?fylke=" + encodeURIComponent(f) + "&kommune=" + encodeURIComponent(k);
+    const resp = await fetch(url);
+    lagSel.innerHTML = await resp.text();
+  }
+
+  async function resolvePostnr() {
+    if (!postnrInp) return;
+    const nr = (postnrInp.value || "").trim();
+    if (!nr) return;
+    const resp = await fetch("{% url 'members:api-postnummer' %}?nr=" + encodeURIComponent(nr));
+    const data = await resp.json();
+    if (data.found) {
+      if (fylkeSel && data.fylke_id) {
+        fylkeSel.value = data.fylke_id;
+        await updateKommuner();
+      }
+      if (kommuneSel && data.kommune_id) {
+        kommuneSel.value = data.kommune_id;
+        await updateLag();
+      }
+    } else {
+      alert("Postnummeret finnes ikke i registeret.");
+    }
+  }
+
+  if (fylkeSel)   fylkeSel.addEventListener('change', updateKommuner);
+  if (kommuneSel) kommuneSel.addEventListener('change', updateLag);
+  if (postnrInp)  postnrInp.addEventListener('blur', resolvePostnr);
+
+  // Sørg for at disabled felter aktiveres ved submit
+  if (form) {
+    form.addEventListener('submit', function(){
+      if (kommuneSel) kommuneSel.disabled = false;
+      if (lagSel)     lagSel.disabled     = false;
+    });
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Medlemmer</h1>
+
+<form method="get" style="display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-items:end;margin-bottom:1rem;">
+  <div>
+    <label for="f">Fylke</label><br>
+    <select name="f" id="f">
+      <option value="">(Alle fylker)</option>
+      {% for x in fylker %}
+        <option value="{{ x.id }}" {% if f == x.id %}selected{% endif %}>{{ x.navn }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label for="k">Kommune</label><br>
+    <select name="k" id="k" {% if not f %}disabled{% endif %}>
+      <option value="">{% if f %}(Alle kommuner){% else %}Velg fylke først{% endif %}</option>
+      {% for x in kommuner %}
+        <option value="{{ x.id }}" {% if k == x.id %}selected{% endif %}>{{ x.navn }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label for="l">Lokallag</label><br>
+    <select name="l" id="l" {% if not f %}disabled{% endif %}>
+      <option value="">{% if f %}(Alle lokallag){% else %}Velg fylke først{% endif %}</option>
+      {% for x in lokallag %}
+        <option value="{{ x.id }}" {% if l == x.id %}selected{% endif %}>{{ x.navn }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div>
+    <label for="tel">Telefon (inneholder)</label><br>
+    <input type="text" name="tel" id="tel" value="{{ tel|default_if_none:'' }}">
+  </div>
+
+  <div>
+    <label for="q">Fritekst (navn/adresse/epost)</label><br>
+    <input type="text" name="q" id="q" value="{{ q|default_if_none:'' }}">
+  </div>
+
+  <div style="display:flex;gap:.5rem;">
+    <button type="submit">Filtrer</button>
+    <a href="{% url 'members:list' %}">Nullstill</a>
+    <a href="{% url 'members:new' %}" style="margin-left:auto;">+ Nytt medlem</a>
+  </div>
+</form>
+
+<p style="margin:.5rem 0;">Totalt: {{ page_obj.paginator.count }} medlem(mer)</p>
+
+<table border="1" cellpadding="6" cellspacing="0" style="width:100%; border-collapse:collapse;">
+  <thead>
+    <tr>
+      <th>Navn</th>
+      <th>Telefon</th>
+      <th>E-post</th>
+      <th>Adresse</th>
+      <th>Postnr</th>
+      <th>Kommune</th>
+      <th>Fylke</th>
+      <th>Lokallag</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for m in members %}
+    <tr>
+      <td>
+        <a href="{% url 'members:detail' m.pk %}">{{ m.fornavn }} {{ m.etternavn }}</a>
+      </td>
+      <td>{{ m.telefon }}</td>
+      <td>{{ m.epost }}</td>
+      <td>{{ m.adresse }}</td>
+      <td>{% if m.postnummer %}{{ m.postnummer.nummer }}{% endif %}</td>
+      <td>{% if m.kommune %}{{ m.kommune.navn }}{% endif %}</td>
+      <td>{% if m.kommune %}{{ m.kommune.fylke.navn }}{% endif %}</td>
+      <td>
+        {% for lag in m.lokallag.all %}
+          {{ lag.navn }}{% if not forloop.last %}, {% endif %}
+        {% empty %}—
+        {% endfor %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="8">Ingen treff på valgt filter.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if is_paginated %}
+  <div style="margin-top:1rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+    {% if page_obj.has_previous %}
+      <a href="?{% if f %}f={{f}}&{% endif %}{% if k %}k={{k}}&{% endif %}{% if l %}l={{l}}&{% endif %}{% if tel %}tel={{tel}}&{% endif %}{% if q %}q={{q}}&{% endif %}page={{ page_obj.previous_page_number }}">« Forrige</a>
+    {% endif %}
+    <span>Side {{ page_obj.number }} av {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a href="?{% if f %}f={{f}}&{% endif %}{% if k %}k={{k}}&{% endif %}{% if l %}l={{l}}&{% endif %}{% if tel %}tel={{tel}}&{% endif %}{% if q %}q={{q}}&{% endif %}page={{ page_obj.next_page_number }}">Neste »</a>
+    {% endif %}
+  </div>
+{% endif %}
+
+<script>
+(function(){
+  const fylkeSel   = document.getElementById('f');
+  const kommuneSel = document.getElementById('k');
+  const lagSel     = document.getElementById('l');
+
+  function toggleDisabled(){
+    const hasF = !!(fylkeSel && fylkeSel.value);
+    if (kommuneSel) kommuneSel.disabled = !hasF;
+    if (lagSel)     lagSel.disabled     = !hasF;
+  }
+  toggleDisabled();
+
+  async function updateKommuner() {
+    if (!fylkeSel || !kommuneSel) return;
+    const f = fylkeSel.value || "";
+    const resp = await fetch("{% url 'members:hx-kommuner' %}?fylke=" + encodeURIComponent(f));
+    kommuneSel.innerHTML = await resp.text();
+    kommuneSel.value = ""; // nullstill kommune ved fylkebytte
+    await updateLag();
+    toggleDisabled();
+  }
+  async function updateLag() {
+    if (!lagSel) return;
+    const f = fylkeSel ? (fylkeSel.value || "") : "";
+    const k = kommuneSel ? (kommuneSel.value || "") : "";
+    const url = "{% url 'members:hx-lokallag' %}?fylke=" + encodeURIComponent(f) + "&kommune=" + encodeURIComponent(k);
+    const resp = await fetch(url);
+    lagSel.innerHTML = await resp.text();
+    lagSel.value = ""; // nullstill lag ved endring
+  }
+
+  if (fylkeSel)   fylkeSel.addEventListener('change', updateKommuner);
+  if (kommuneSel) kommuneSel.addEventListener('change', updateLag);
+})();
+</script>
+{% endblock %}

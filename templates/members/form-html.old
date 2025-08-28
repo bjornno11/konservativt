@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{% if object %}Rediger medlem{% else %}Nytt medlem{% endif %}</h1>
+
+<p><em>Tips: Start med å velge <strong>Fylke</strong>. Da begrenser vi Kommuner og Lokallag.</em></p>
+
+<form method="post">
+  {% csrf_token %}
+
+  <fieldset>
+    <legend>Tilknytning</legend>
+    <p>
+      <label for="id_fylke">Fylke</label><br>
+      {{ form.fylke }}
+    </p>
+    <p>
+      <label for="id_kommune">Kommune</label><br>
+      {{ form.kommune }}
+    </p>
+    <p>
+      <label for="id_lokallag">Lokallag (hold Ctrl/⌘ for flere)</label><br>
+      <select name="lokallag" id="id_lokallag" multiple size="8">
+        {% for opt in form.fields.lokallag.queryset %}
+          <option value="{{ opt.pk }}" {% if object and opt in object.lokallag.all %}selected{% endif %}>{{ opt.navn }}</option>
+        {% endfor %}
+      </select>
+    </p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Person</legend>
+    {{ form.fornavn.label_tag }} {{ form.fornavn }}<br>
+    {{ form.etternavn.label_tag }} {{ form.etternavn }}<br>
+    {{ form.adresse.label_tag }} {{ form.adresse }}<br>
+    {{ form.postnr.label_tag }} {{ form.postnr }}<br>
+    {{ form.telefon.label_tag }} {{ form.telefon }}<br>
+    {{ form.fodselsdato.label_tag }} {{ form.fodselsdato }}<br>
+    {{ form.epost.label_tag }} {{ form.epost }}<br>
+  </fieldset>
+
+  <fieldset>
+    <legend>Verving</legend>
+    {{ form.verve_kilde.label_tag }} {{ form.verve_kilde }}<br>
+    {{ form.verver_navn.label_tag }} {{ form.verver_navn }}<br>
+  </fieldset>
+
+  <p><button type="submit">Lagre</button>
+     {% if object %}<a href="{% url 'members:detail' object.pk %}">Avbryt</a>{% else %}<a href="{% url 'members:list' %}">Avbryt</a>{% endif %}</p>
+</form>
+
+<script>
+(function(){
+  const fylkeSel = document.getElementById('id_fylke');
+  const kommuneSel = document.getElementById('id_kommune');
+  const lagSel = document.getElementById('id_lokallag');
+  const postnrInput = document.getElementById('id_postnr');
+
+  // disable kommune/lag inntil fylke er valgt (litt “guiding”)
+  function toggleDisabled(){
+    const hasF = !!fylkeSel.value;
+    kommuneSel.disabled = !hasF;
+    lagSel.disabled = !hasF;
+  }
+  toggleDisabled();
+
+  async function updateKommuner() {
+    const f = fylkeSel.value || "";
+    const resp = await fetch("{% url 'members:hx-kommuner' %}?fylke=" + encodeURIComponent(f));
+    kommuneSel.innerHTML = await resp.text();
+    await updateLag();
+    toggleDisabled();
+  }
+
+  async function updateLag() {
+    const f = fylkeSel.value || "";
+    const k = kommuneSel.value || "";
+    const resp = await fetch("{% url 'members:hx-lokallag' %}?fylke=" + encodeURIComponent(f) + "&kommune=" + encodeURIComponent(k));
+    lagSel.innerHTML = await resp.text();
+  }
+
+  async function resolvePostnr() {
+    const nr = (postnrInput.value || "").trim();
+    if (!nr) return;
+    const resp = await fetch("{% url 'members:api-postnummer' %}?nr=" + encodeURIComponent(nr));
+    const data = await resp.json();
+    if (data.found) {
+      // sett fylke/kommune fra postnr (overstyrer evt. tidligere valg)
+      if (data.fylke_id) {
+        fylkeSel.value = data.fylke_id;
+        await updateKommuner();
+      }
+      if (data.kommune_id) {
+        kommuneSel.value = data.kommune_id;
+        await updateLag();
+      }
+    } else {
+      alert("Postnummeret finnes ikke i registeret.");
+    }
+  }
+
+  if (fylkeSel) fylkeSel.addEventListener('change', updateKommuner);
+  if (kommuneSel) kommuneSel.addEventListener('change', updateLag);
+  if (postnrInput) postnrInput.addEventListener('blur', resolvePostnr);
+})();
+</script>
+{% endblock %}
