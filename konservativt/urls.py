@@ -20,6 +20,9 @@ urlpatterns = [
     # Forside -> dokumentliste
     path("", include("portal.urls")),          
     path("members/", include(("members.urls", "members"), namespace="members")),
+    path("sentral/", include("sentral.urls")),      # ← NY
+    path("", include("sentral.router_urls")),       # ← NY: post-login router (forklart under)
+
 ]
 
 # Kun i DEBUG: serve media (ev. static) fra Django
