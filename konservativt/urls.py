@@ -18,7 +18,7 @@ urlpatterns = [
     path("doc/", include(("docs.urls", "docs"), namespace="docs")),
 
     # Forside -> dokumentliste
-    path("", include("portal.urls")),          
+#    path("", include("portal.urls")),          
     path("members/", include(("members.urls", "members"), namespace="members")),
     path("sentral/", include("sentral.urls")),      # ← NY
     path("", include("sentral.router_urls")),       # ← NY: post-login router (forklart under)

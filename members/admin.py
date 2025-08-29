@@ -1,5 +1,5 @@
 # members/admin.py
-print(">>> Laster FULL members.admin (prod) <<<")
+#print(">>> Laster FULL members.admin (prod) <<<")
 
 from django.contrib import admin, messages
 from django.db import transaction
@@ -254,30 +254,14 @@ class LokallagAdmin(admin.ModelAdmin):
 
 @admin.register(Fylkeslag)
 class FylkeslagAdmin(admin.ModelAdmin):
-    list_display = ("navn", "fylke", "lokallag_antall", "se_lokallag", "leder_navn")
+    # KUN felt vi vet finnes på modellen
+    list_display  = ("id", "navn", "fylke", "leder_navn")      # 'fylke' er FK, trygt å vise
     search_fields = ("navn", "fylke__navn")
-    list_filter = ("fylke",)
+    list_filter   = ("fylke",)
+    ordering      = ("navn", "id")
+
+    # Viktig: ingen inlines her før siden laster stabilt
     inlines = [FylkeslagsmedlemskapInline]
-
-    def lokallag_antall(self, obj):
-        return obj.fylke.lokallag.count()
-    lokallag_antall.short_description = "Lokallag"
-
-    def se_lokallag(self, obj):
-        url = reverse("admin:members_lokallag_changelist")
-        return format_html('<a href="{}?fylke__id__exact={}">Se lokallag</a>', url, obj.fylke_id)
-    se_lokallag.short_description = ""
-
-    def leder_navn(self, obj):
-        # hent evt. leder(e) via Fylkeslagsmedlemskap
-        ledere = (Fylkeslagsmedlemskap.objects
-                  .filter(fylkeslag=obj, rolle="leder")
-                  .select_related("medlem")
-                  .order_by("-startdato"))
-        names = [f"{fm.medlem.fornavn} {fm.medlem.etternavn}" for fm in ledere if fm.medlem_id]
-        return ", ".join(names) if names else "—"
-    leder_navn.short_description = "Leder"
-
 
 @admin.register(Medlem)
 class MedlemAdmin(admin.ModelAdmin):

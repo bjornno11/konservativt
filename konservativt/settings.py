@@ -46,7 +46,6 @@ INSTALLED_APPS = [
     "geo", 
     "members",
     "audit",
-    "portal",
     "sentral",
 ]
 
