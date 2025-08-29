@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "members",
     "audit",
     "portal",
+    "sentral",
 ]
 
 # --- Middleware ---
@@ -101,7 +102,7 @@ DATABASES = {
 # --- Auth / Redirects ---
 LOGIN_URL = "/accounts/login/"
 # Bruk namespace fordi docs/urls.py har app_name="docs"
-LOGIN_REDIRECT_URL = "docs:docs-list"
+LOGIN_REDIRECT_URL = "/konservativt/home/"
 
 # --- I18N / TZ ---
 LANGUAGE_CODE = "nb"

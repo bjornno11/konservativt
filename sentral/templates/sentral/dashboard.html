@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <title>Sentralstyret</title>
+  <link rel="stylesheet" href="/konservativt/static/css/site.css?v=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    .wrap { max-width: 1024px; margin: 0 auto; padding: 1rem; }
+    .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .card { border: 1px solid #e3e3e3; border-radius: 12px; padding: 1rem; background: #fff; }
+    .card h3 { margin: 0 0 .5rem; }
+    .muted { color: #666; font-size: .95rem; }
+    .actions a { display: inline-block; margin-right: .5rem; margin-top: .5rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Sentralstyret – oversikt</h1>
+    <p class="muted">Velkommen. Velg et verktøy under.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Medlemmer</h3>
+        <p class="muted">Se og søk blant alle medlemmer.</p>
+        <div class="actions">
+          <a href="{{ links.medlemmer }}">Åpne Medlemmer (admin)</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Selvregistrerte (pending)</h3>
+        <p class="muted">Godkjenn og tildel lokallag.</p>
+        <div class="actions">
+          <a href="{{ links.pending }}">Åpne Pending (admin)</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Lokallag & Fylkeslag</h3>
+        <p class="muted">Struktur og roller.</p>
+        <div class="actions">
+          <a href="{{ links.lokallag }}">Lokallag</a>
+          <a href="{{ links.fylkeslag }}">Fylkeslag</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Dokumenter</h3>
+        <p class="muted">Åpne dokumentportalen.</p>
+        <div class="actions">
+          <a href="{{ links.docs }}">Dokumenter</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Admin</h3>
+        <p class="muted">Full admin-oversikt.</p>
+        <div class="actions">
+          <a href="{{ links.admin }}">Django admin</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
