@@ -3,6 +3,7 @@ from django.conf import settings
 from geo.models import Kommune, Postnummer, Fylke
 from django.urls import reverse
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 FYLKESLAG_ROLLER = (
     ("leder", "Leder"),
@@ -154,3 +155,49 @@ class Fylkeslagsmedlemskap(models.Model):
                     "Medlemmet må være medlem i et lokallag i samme fylke for å kunne "
                     "registreres i fylkeslaget."
                 )
+# members/models.py tillegg etter sentral
+
+class Rolle(models.Model):
+    """
+    Felles rollekatalog med scope for hvilket nivå rollen gjelder.
+    scope: 'lokal', 'fylke', 'sentral'
+    """
+    SCOPE_CHOICES = (
+        ("lokal", "Lokallag"),
+        ("fylke", "Fylkeslag"),
+        ("sentral", "Sentralstyre"),
+    )
+    navn = models.CharField(max_length=100)
+    kode = models.SlugField(max_length=100, blank=True)  # valgfri nøkkel, f.eks. 'leder'
+    scope = models.CharField(max_length=10, choices=SCOPE_CHOICES)
+    rang = models.PositiveIntegerField(default=100)      # lavere = viktigere
+
+    class Meta:
+        unique_together = [("kode", "scope")]
+        ordering = ("scope", "rang", "navn")
+
+    def __str__(self):
+        return f"{self.get_scope_display()}: {self.navn}"
+
+
+class SentralstyreMedlemskap(models.Model):
+    """
+    Medlemskap i sentralstyret med rolle og gyldighetsperiode (historikk).
+    """
+    medlem = models.ForeignKey("Medlem", on_delete=models.CASCADE, related_name="sentralverv")
+    rolle = models.ForeignKey("Rolle", on_delete=models.PROTECT, limit_choices_to={"scope": "sentral"})
+    startdato = models.DateField(default=timezone.now)
+    sluttdato = models.DateField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Sentralstyre-medlemskap"
+        verbose_name_plural = "Sentralstyre-medlemskap"
+        ordering = ("-startdato",)
+
+    @property
+    def aktiv(self):
+        return self.sluttdato is None or self.sluttdato >= timezone.now().date()
+
+    def __str__(self):
+        til = f"– {self.sluttdato}" if self.sluttdato else "–"
+        return f"{self.medlem} • {self.rolle.navn} ({self.startdato} {til})"

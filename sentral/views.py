@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from members.models import SentralstyreMedlemskap
 
 # Create your views here.
 from django.shortcuts import render, redirect
@@ -7,7 +8,6 @@ from .utils import sentral_required, user_in_sentral
 
 @sentral_required
 def dashboard(request):
-    # Pekere til relevante admin-sider/flows
     links = {
         "pending": reverse("admin:members_pendingmedlem_changelist"),
         "medlemmer": reverse("admin:members_medlem_changelist"),
@@ -16,7 +16,11 @@ def dashboard(request):
         "docs": "/konservativt/doc/",
         "admin": reverse("admin:index"),
     }
-    return render(request, "sentral/dashboard.html", {"links": links})
+    aktive = (SentralstyreMedlemskap.objects
+              .select_related("medlem", "rolle")
+              .filter(sluttdato__isnull=True)
+              .order_by("rolle__rang", "medlem__etternavn", "medlem__fornavn"))
+    return render(request, "sentral/dashboard.html", {"links": links, "sentral_aktive": aktive})
 
 def post_login_router(request):
     """

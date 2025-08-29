@@ -28,13 +28,27 @@
         </div>
       </div>
 
-      <div class="card">
-        <h3>Selvregistrerte (pending)</h3>
-        <p class="muted">Godkjenn og tildel lokallag.</p>
-        <div class="actions">
-          <a href="{{ links.pending }}">Åpne Pending (admin)</a>
-        </div>
+#      <div class="card">
+#        <h3>Selvregistrerte (pending)</h3>
+#        <p class="muted">Godkjenn og tildel lokallag.</p>
+#        <div class="actions">
+#          <a href="{{ links.pending }}">Åpne Pending (admin)</a>
+#        </div>
+#      </div>
+    <div class="card">
+      <h3>Sentralstyre (aktive)</h3>
+      <ul>
+        {% for s in sentral_aktive %}
+          <li>{{ s.medlem.fornavn }} {{ s.medlem.etternavn }} — {{ s.rolle.navn }}</li>
+        {% empty %}
+          <li>Ingen aktive roller registrert.</li>
+        {% endfor %}
+      </ul>
+      <div class="actions">
+        <a href="/konservativt/admin/members/sentralstyremedlemskap/">Administrer</a>
       </div>
+    </div>
+
 
       <div class="card">
         <h3>Lokallag & Fylkeslag</h3>

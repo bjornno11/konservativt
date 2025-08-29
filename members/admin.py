@@ -14,6 +14,8 @@ from .models import (
     Lokallag,
     Medlemskap,
     PendingMedlem,
+    Rolle,
+    SentralstyreMedlemskap,
 )
 from geo.models import Fylke, Kommune
 
@@ -388,3 +390,37 @@ class PendingMedlemAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+@admin.register(Rolle)
+class RolleAdmin(admin.ModelAdmin):
+    list_display = ("navn", "kode", "scope", "rang")
+    list_filter = ("scope",)
+    search_fields = ("navn", "kode")
+    ordering = ("scope", "rang", "navn")
+
+
+class SentralstyreMedlemskapInline(admin.TabularInline):
+    model = SentralstyreMedlemskap
+    extra = 0
+    autocomplete_fields = ("rolle",)
+    fields = ("rolle", "startdato", "sluttdato")
+    readonly_fields = ("startdato",)
+
+# Heng inlinen på Medlem-admin (uten å miste eksisterende inlines)
+try:
+    MedlemAdmin.inlines = list(getattr(MedlemAdmin, "inlines", [])) + [SentralstyreMedlemskapInline]
+except NameError:
+    pass
+
+
+@admin.register(SentralstyreMedlemskap)
+class SentralstyreMedlemskapAdmin(admin.ModelAdmin):
+    list_display = ("medlem", "rolle", "startdato", "sluttdato", "er_aktiv")
+    list_filter = ("rolle",)
+    search_fields = ("medlem__fornavn", "medlem__etternavn", "rolle__navn")
+
+    def er_aktiv(self, obj):
+        return obj.aktiv
+    er_aktiv.boolean = True
+    er_aktiv.short_description = "Aktiv"
