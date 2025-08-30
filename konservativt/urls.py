@@ -22,7 +22,7 @@ urlpatterns = [
     path("members/", include(("members.urls", "members"), namespace="members")),
     path("sentral/", include("sentral.urls")),      # ← NY
     path("", include("sentral.router_urls")),       # ← NY: post-login router (forklart under)
-
+    path("fylke/", include(("fylkehub.urls", "fylkehub"), namespace="fylkehub")),
 ]
 
 # Kun i DEBUG: serve media (ev. static) fra Django

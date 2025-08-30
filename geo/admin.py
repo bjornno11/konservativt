@@ -9,10 +9,11 @@ except Exception:
 
 @admin.register(Fylke)
 class FylkeAdmin(admin.ModelAdmin):
-    list_display = ("id", "navn", "slug", "contact_email", "contact_phone")
+    list_display = ("navn", "slug", "homepage_public")
+    list_filter  = ("homepage_public",)
     search_fields = ("navn", "slug")
+    fields = ("navn", "slug", "homepage_title", "homepage_intro", "homepage_public")
     prepopulated_fields = {"slug": ("navn",)}
-    ordering = ("navn",)
 
 @admin.register(Kommune)
 class KommuneAdmin(admin.ModelAdmin):

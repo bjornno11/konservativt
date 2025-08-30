@@ -4,6 +4,20 @@ Django settings for konservativt project.
 
 from pathlib import Path
 import os
+env = os.environ.get
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+#EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+EMAIL_HOST = env("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(env("EMAIL_PORT", 25))
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env("EMAIL_USE_TLS", "false").lower() == "true"
+EMAIL_USE_SSL = env("EMAIL_USE_SSL", "false").lower() == "true"  # normalt False hvis TLS=True
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "noreply@q1.no")
+SERVER_EMAIL = env("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+
 
 # --- Paths ---
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,7 +53,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
+    
     # Dine apper
     "docs",
     "access",
@@ -47,6 +61,7 @@ INSTALLED_APPS = [
     "members",
     "audit",
     "sentral",
+    "fylkehub"
 ]
 
 # --- Middleware ---
@@ -99,10 +114,9 @@ DATABASES = {
 }
 
 # --- Auth / Redirects ---
-LOGIN_URL = "/accounts/login/"
-# Bruk namespace fordi docs/urls.py har app_name="docs"
-LOGIN_REDIRECT_URL = "/konservativt/home/"
-
+LOGIN_URL = "/konservativt/accounts/login/"
+LOGOUT_REDIRECT_URL = "/konservativt/"
+LOGIN_REDIRECT_URL = "/konservativt/"         # eller "/konservativt/sentral/" hvis du vil
 # --- I18N / TZ ---
 LANGUAGE_CODE = "nb"
 TIME_ZONE = "Europe/Oslo"
