@@ -83,6 +83,13 @@ class Medlem(models.Model):
     verve_kilde = models.CharField(max_length=10, choices=VERVE_KILDE_CHOICES, default="self")
     verver_navn = models.CharField(max_length=128, blank=True)
     verver_user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="medlemsprofil",
+    )
 
     # M2M via gjennom-tabell: gir rom for felt som fra/til-dato senere
     lokallag    = models.ManyToManyField("Lokallag", through="Medlemskap", related_name="medlemmer", blank=True)

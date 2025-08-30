@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="nb"><head><meta charset="utf-8"><title>{{ fylke.navn }}</title>
+<link rel="stylesheet" href="/konservativt/static/css/site.css?v=1"></head>
+<body>
+<main class="main">
+    <h1>{{ title }}</h1>
+    {% if intro %}<p>{{ intro }}</p>{% endif %}
+
+  <nav>
+    <a href="{% url 'fylkehub:lokallag' fylke.slug %}">Lokallag</a> ·
+    <a href="{% url 'fylkehub:medlemmer' fylke.slug %}">Medlemmer</a> ·
+    <a href="{% url 'fylkehub:docs' fylke.slug %}">Dokumenter</a>
+  </nav>
+
+  <h2>Lokallag i {{ fylke.navn }}</h2>
+  <ul>
+    {% for l in lokallag %}
+      <li>{{ l.navn }}{% if l.kommune %} ({{ l.kommune.navn }}){% endif %}</li>
+    {% empty %}
+      <li>Ingen lokallag registrert enda.</li>
+    {% endfor %}
+  </ul>
+</main>
+</body></html>

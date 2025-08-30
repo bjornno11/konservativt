@@ -6,6 +6,76 @@ from django.db import transaction
 from django.db.models import Q, Count, Case, When, Value, IntegerField
 from django.utils.html import format_html
 from django.urls import reverse
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
+from django.contrib.auth.forms import PasswordResetForm
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from django.contrib.sites.shortcuts import get_current_site
+from django.template.loader import render_to_string
+from django.conf import settings
+
+SENTRAL_GROUP_NAME = "sentralstyret"
+def get_or_create_user_for_medlem(m):
+    User = get_user_model()
+    email = (m.epost or "").strip().lower()
+    if not email:
+        return None, "Medlem mangler e-post"
+
+    # Finn eksisterende user (koblet eller via epost)
+    u = m.user
+    if not u:
+        u = User.objects.filter(email=email).first()
+    if not u:
+        # Opprett ny bruker uten passord (bruker setter selv via lenke)
+        # username = email (enkelt og greit)
+        u = User.objects.create_user(username=email, email=email, password=None, is_active=True)
+    # Koble hvis ikke allerede koblet
+    if not m.user_id:
+        m.user = u
+        m.save(update_fields=["user"])
+    return u, None
+
+
+def ensure_sentral_group(user):
+    g, _ = Group.objects.get_or_create(name=SENTRAL_GROUP_NAME)
+    user.groups.add(g)
+    return g
+
+
+def send_set_password_email(request, user):
+    """
+    Bruk Djangos PasswordResetForm til å sende 'set your password'-lenke.
+    Returnerer True hvis sendt OK, ellers False og evt. en URL du kan vise manuelt.
+    """
+    # Standardformularen krever at brukeren eksisterer i DB (det gjør den)
+    form = PasswordResetForm({"email": user.email})
+    if form.is_valid():
+        try:
+            form.save(
+                request=request,
+                use_https=True,
+                email_template_name="registration/password_reset_email.html",  # valgfritt; bruker standard om ikke finnes
+                subject_template_name="registration/password_reset_subject.txt",  # valgfritt
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+            )
+            return True, None
+        except Exception:
+            pass
+
+    # Fallback: generer URL manuelt så admin kan kopiere den
+    from django.contrib.auth.tokens import default_token_generator
+    uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    # Standard URL for confirm-view (respekterer FORCE_SCRIPT_NAME)
+    from django.urls import reverse
+    path = reverse("password_reset_confirm", kwargs={"uidb64": uidb64, "token": token})
+    # Lag full URL (bruk request)
+    scheme = "https"
+    host = request.get_host()
+    url = f"{scheme}://{host}{path}"
+    return False, url
+
 
 from .models import (
     Fylkeslag,
@@ -384,6 +454,36 @@ class RolleAdmin(admin.ModelAdmin):
     ordering = ("scope", "rang", "navn")
 
 
+@admin.action(description="Inviter til Sentralstyret (opprett bruker + send sett-passord)")
+def invite_to_sentral(modeladmin, request, queryset):
+    emailed = 0
+    manual  = []
+
+    for obj in queryset:
+        # støtt både SentralstyreMedlemskap og Medlem som queryset
+        medlem = getattr(obj, "medlem", None) or obj
+        user, err = get_or_create_user_for_medlem(medlem)
+        if err:
+            messages.error(request, f"{medlem}: {err}")
+            continue
+
+        ensure_sentral_group(user)
+        ok, url = send_set_password_email(request, user)
+        if ok:
+            emailed += 1
+        else:
+            manual.append((medlem, url))
+
+    if emailed:
+        messages.success(request, f"Sendte sett-passord-epost til {emailed} bruker(e).")
+    if manual:
+        lines = "\n".join([f"{m} → {u}" for m, u in manual])
+        messages.warning(
+            request,
+            "Kunne ikke sende epost for noen – kopier lenkene og send manuelt:\n" + lines
+        )
+
+
 class SentralstyreMedlemskapInline(admin.TabularInline):
     model = SentralstyreMedlemskap
     extra = 0
@@ -403,7 +503,7 @@ class SentralstyreMedlemskapAdmin(admin.ModelAdmin):
     list_display = ("medlem", "rolle", "startdato", "sluttdato", "er_aktiv")
     list_filter = ("rolle",)
     search_fields = ("medlem__fornavn", "medlem__etternavn", "rolle__navn")
-
+    actions = [invite_to_sentral]   # ← LEGG TIL DENNE
     def er_aktiv(self, obj):
         return obj.aktiv
     er_aktiv.boolean = True
