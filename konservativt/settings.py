@@ -61,7 +61,8 @@ INSTALLED_APPS = [
     "members",
     "audit",
     "sentral",
-    "fylkehub"
+    "fylkehub",
+    "laghub",
 ]
 
 # --- Middleware ---
