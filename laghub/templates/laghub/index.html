@@ -1,0 +1,17 @@
+<!doctype html><html lang="nb"><head>
+<meta charset="utf-8"><title>Lokallag</title>
+<link rel="stylesheet" href="/konservativt/static/css/site.css?v=1">
+</head><body><main class="main">
+  <h1>Lokallag</h1>
+  <ul>
+    {% for l in lag %}
+      <li>
+        <a href="{% url 'laghub:home' l.slug %}">{{ l.navn }}</a>
+        {% if l.kommune %} – {{ l.kommune.navn }}{% endif %}
+        {% if l.fylke %} ({{ l.fylke.navn }}){% endif %}
+      </li>
+    {% empty %}
+      <li>Ingen lokallag registrert.</li>
+    {% endfor %}
+  </ul>
+</main></body></html>

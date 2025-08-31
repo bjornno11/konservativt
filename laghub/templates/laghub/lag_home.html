@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <title>{{ lag.navn }}</title>
+  <link rel="stylesheet" href="/konservativt/static/css/site.css?v=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    .card{max-width:800px;margin:2rem auto;padding:1rem}
+    ul{margin:0 0 1rem 1.25rem}
+  </style>
+</head>
+<body>
+<main class="main">
+  <div class="card">
+    <h1>{{ lag.navn }}</h1>
+
+    {% if lag.homepage_intro %}
+      <p>{{ lag.homepage_intro }}</p>
+    {% endif %}
+
+    <h3>Kontakt</h3>
+    <ul>
+      {% if lag.contact_email %}<li>E-post: <a href="mailto:{{ lag.contact_email }}">{{ lag.contact_email }}</a></li>{% endif %}
+      {% if lag.contact_phone %}<li>Telefon: {{ lag.contact_phone }}</li>{% endif %}
+      {% if lag.kommune %}<li>Kommune: {{ lag.kommune.navn }}</li>{% endif %}
+      {% if lag.fylke %}<li>Fylke: {{ lag.fylke.navn }}</li>{% endif %}
+    </ul>
+
+    <h3>Lenker</h3>
+    <ul>
+      <li><a href="{% url 'laghub:medlemmer' lag.slug %}">Medlemmer</a></li>
+      <li><a href="{% url 'laghub:docs' lag.slug %}">Dokumenter</a></li>
+    </ul>
+  </div>
+</main>
+</body>
+</html>
