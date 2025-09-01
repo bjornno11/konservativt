@@ -4,19 +4,23 @@ Django settings for konservativt project.
 
 from pathlib import Path
 import os
-env = os.environ.get
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-#EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+def _env_bool(name: str, default: bool = False) -> bool:
+    val = os.environ.get(name)
+    if val is None:
+        return default
+    return str(val).strip().lower() in {"1", "true", "yes", "on"}
 
-EMAIL_HOST = env("EMAIL_HOST", "localhost")
-EMAIL_PORT = int(env("EMAIL_PORT", 25))
-EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = env("EMAIL_USE_TLS", "false").lower() == "true"
-EMAIL_USE_SSL = env("EMAIL_USE_SSL", "false").lower() == "true"  # normalt False hvis TLS=True
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "noreply@q1.no")
-SERVER_EMAIL = env("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.zmx.no")           # sett fornuftige default
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", True)
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "20"))
+
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "bn@zc.no")
+SERVER_EMAIL = os.environ.get("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 
 
 # --- Paths ---
@@ -58,11 +62,12 @@ INSTALLED_APPS = [
     "docs",
     "access",
     "geo", 
-    "members",
+#    "members",
     "audit",
     "sentral",
     "fylkehub",
     "laghub",
+    "members.apps.MembersConfig",
 ]
 
 # --- Middleware ---
