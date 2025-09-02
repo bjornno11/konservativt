@@ -6,6 +6,25 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from .utils import sentral_required, user_in_sentral
 
+from django.contrib.admin.views.decorators import staff_member_required
+from django.http import HttpResponse
+from django.core.mail import send_mail
+from django.conf import settings
+import logging
+log = logging.getLogger(__name__)
+
+@staff_member_required
+def test_email(request):
+    to = request.user.email or settings.DEFAULT_FROM_EMAIL
+    log.info("TEST-EMAIL: sender til %s via %s:%s TLS=%s user=%s",
+             to, settings.EMAIL_HOST, settings.EMAIL_PORT, settings.EMAIL_USE_TLS, settings.EMAIL_HOST_USER)
+    n = send_mail("Konservativt SMTP test",
+                  "Dette er en test sendt fra Gunicorn-prosessen.",
+                  settings.DEFAULT_FROM_EMAIL, [to], fail_silently=False)
+    return HttpResponse(f"OK: send_mail returnerte {n} til {to}")
+
+
+
 @sentral_required
 def dashboard(request):
     links = {

@@ -1,15 +1,13 @@
-from django.apps import AppConfig
-
+# members/apps.py
 from django.apps import AppConfig
 import logging
 
+# members/apps.py
 class MembersConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "members"
 
     def ready(self):
-        try:
-            from . import signals  # noqa: F401
-        except Exception:
-            import logging
-            logging.getLogger(__name__).exception("Klarte ikke å laste members.signals")
+        # Vi sender e-post direkte fra viewet etter commit.
+        # (Kan reaktivere signals senere når rotårsaken er funnet.)
+        pass

@@ -9,7 +9,7 @@ from django.views import View
 from django.views.generic import CreateView, UpdateView, ListView, DetailView, TemplateView
 from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_GET
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.db.models import Q
 from django.utils.functional import cached_property
 from .models import Medlem, Medlemskap, Lokallag
@@ -17,6 +17,8 @@ from .forms import MedlemForm
 from .queries import pending_qs
 from geo.models import Fylke, Kommune, Postnummer
 from .forms import SelfMedlemPublicForm
+from django.db import transaction
+from members.notifications import notify_new_self_registration
 
 logger = logging.getLogger("members")
 
@@ -250,9 +252,30 @@ class SelfRegister(CreateView):
     success_url = reverse_lazy("members:self-thanks")
 
     def form_valid(self, form):
-        obj = form.save(request=None)  # viktig: ingen innlogget verver settes
+        # 1) Lagre en gang, og behold objektet
+        self.object = form.save(request=None)  # viktig: ingen innlogget verver settes
+        # 2) Sørg for at M2M (lokallag) også lagres
+        if hasattr(form, "save_m2m"):
+            form.save_m2m()
+
+        # 3) Send varsel-epost ETTER at transaksjonen er committed
+        def _send():
+            try:
+                notify_new_self_registration(self.object)
+                logging.getLogger(__name__).info(
+                    "Varsel sendt ved self-registrering id=%s", getattr(self.object, "id", "?")
+                )
+            except Exception:
+                logging.getLogger(__name__).exception(
+                    "Varsel-epost feilet for id=%s", getattr(self.object, "id", "?")
+                )
+
+        transaction.on_commit(_send)
+
+        # 4) Flash-melding og redirect
         messages.success(self.request, "Takk! Registreringen er mottatt.")
-        return super().form_valid(form)
+        return HttpResponseRedirect(self.get_success_url())
+
 
 class SelfThanks(TemplateView):
     template_name = "members/self_thanks.html"

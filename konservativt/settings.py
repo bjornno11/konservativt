@@ -5,6 +5,21 @@ Django settings for konservativt project.
 from pathlib import Path
 import os
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "loggers": {
+        # våre filer members/signals.py og members/notifications.py bruker __name__
+        "members": {"handlers": ["console"], "level": "INFO"},
+        # få med Django-request feil også (nyttig for 500)
+        "django.request": {"handlers": ["console"], "level": "ERROR"},
+    },
+}
+
+
 def _env_bool(name: str, default: bool = False) -> bool:
     val = os.environ.get(name)
     if val is None:
