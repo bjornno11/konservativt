@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Velkommen{% endblock %}</title>
+  <link rel="stylesheet" href="/konservativt/static/css/site.css?v=1">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar__inner">
+    <a href="/konservativt/" class="brand">
+      <img src="/konservativt/static/img/logo.png" alt="Konservativt" height="32">
+      <span></span>
+    </a>
+    <!-- INGEN interne lenker her -->
+  </div>
+</header>
+
+<main class="main">
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>
