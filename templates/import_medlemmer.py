@@ -6,8 +6,70 @@ from django.apps import apps
 from members.models import Medlem
 from geo.models import Postnummer
 
+def fix_cp850_mojibake(s: str) -> str:
+    """
+    Reparerer tekst som opprinnelig var CP850, men som ble feiltolket og endte opp
+    som UTF-8 med sekvenser som C2 86 der 0x86 (CP850) skulle vært.
+    """
+    if not s:
+        return s
+    try:
+        return s.encode('latin-1','strict').decode('cp850','strict')
+    except Exception:
+        return s
+    import re
+
+# templates/import_medlemmer.py
+
+import csv, re
+from django.utils import timezone
+from members.models import Medlem
+from geo.models import Postnummer
+from django.apps import apps
+
+# ---- HJELPEFUNKSJONER ----
+ART = re.compile(r'[Â┬](?=[åÅøØæÆ])')
+
+def strip_utf8_artifacts(s: str) -> str:
+    if not s:
+        return s
+    return ART.sub('', s)
+
+def fix_cp850_mojibake(s: str) -> str:
+    if not s:
+        return s
+    try:
+        return s.encode('latin-1', 'strict').decode('cp850', 'strict')
+    except Exception:
+        return s
+
 # ---- KONFIG ----
-ENCODING = "utf-8"          # bytt til "cp1252" om tegn ser feil ut
+ENCODING = "utf-8"
+CSV_PATH = "medlemmer.csv"
+UPDATE_EXISTING = True
+DUMMY_DOMAIN = "mangler.q1.no"
+
+# ... resten av funksjonene dine (normalize_key, split_name, osv.)
+
+def run():
+    # ...
+    g = lambda key: (row.get(fields_norm[key]) or "").strip()
+
+    navn        = strip_utf8_artifacts(fix_cp850_mojibake(g("navn")))
+    epost_in    = g("epost").lower()
+    telefon     = strip_utf8_artifacts(fix_cp850_mojibake(g("telefon")))
+    adresse     = strip_utf8_artifacts(fix_cp850_mojibake(g("adresse")))
+    postnr      = g("postnummer")
+    kommune_csv = (
+        strip_utf8_artifacts(fix_cp850_mojibake(g("kommune")))
+        if "kommune" in fields_norm else ""
+    )
+
+    # resten av run() ...
+
+
+# ---- KONFIG ----
+ENCODING = "cp850"          # bytt til "cp1252" eller utf-8 eller latin-1 om tegn ser feil ut
 CSV_PATH = "medlemmer.csv"  # ved siden av manage.py
 UPDATE_EXISTING = True      # oppdater eksisterende poster (på epost-match)
 DUMMY_DOMAIN = "mangler.q1.no"
@@ -169,12 +231,23 @@ def run():
         rows += 1
         g = lambda key: (row.get(fields_norm[key]) or "").strip()
 
-        navn = g("navn")
-        epost_in = g("epost").lower()
-        telefon = g("telefon")
-        adresse = g("adresse")
-        postnr = g("postnummer")
-        kommune_csv = g("kommune") if "kommune" in fields_norm else ""
+        # Bruk fikser + stripping på tekstfeltene (IKKE på e-post!)
+        navn        = strip_utf8_artifacts(fix_cp850_mojibake(g("navn")))
+        epost_in    = g("epost").lower()  # e-post skal ikke moddes
+        telefon     = strip_utf8_artifacts(fix_cp850_mojibake(g("telefon")))
+        adresse     = strip_utf8_artifacts(fix_cp850_mojibake(g("adresse")))
+        postnr      = g("postnummer")  # rent numerisk, la stå
+        kommune_csv = (
+            strip_utf8_artifacts(fix_cp850_mojibake(g("kommune")))
+            if "kommune" in fields_norm else ""
+)
+
+#        navn = g("navn")
+#        epost_in = g("epost").lower()
+#        telefon = g("telefon")
+#        adresse = g("adresse")
+#        postnr = g("postnummer")
+#        kommune_csv = g("kommune") if "kommune" in fields_norm else ""
 
         # Postnummer
         try:
