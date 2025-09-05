@@ -146,13 +146,13 @@ USE_TZ = True
 
 # --- Kjører under URL-prefiks /konservativt ---
 # Nginx STRIPPER prefiks (proxy_pass ...9071/;), men vi vil at reverserte lenker skal ha /konservativt
-FORCE_SCRIPT_NAME = "/konservativt"
+# FORCE_SCRIPT_NAME = "/konservativt"
 
 # --- Static / Media ---
-STATIC_URL = "/konservativt/static/"
-MEDIA_URL = "/konservativt/media/"
+STATIC_URL = "/static/"
+MEDIA_URL = "/media/"
 STATIC_ROOT = "/srv/konservativt/static/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = "/srv/konservativt/media"
 
 # --- Proxy / sikkerhet ---
 USE_X_FORWARDED_HOST = True
