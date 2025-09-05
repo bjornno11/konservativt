@@ -149,10 +149,10 @@ USE_TZ = True
 # FORCE_SCRIPT_NAME = "/konservativt"
 
 # --- Static / Media ---
-STATIC_URL = "/static/"
-MEDIA_URL = "/media/"
+STATIC_URL = "/konservativt/static/"
+MEDIA_URL = "/konservativt/media/"
 STATIC_ROOT = "/srv/konservativt/static/"
-MEDIA_ROOT = "/srv/konservativt/media"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # --- Proxy / sikkerhet ---
 USE_X_FORWARDED_HOST = True
