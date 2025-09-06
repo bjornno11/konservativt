@@ -5,6 +5,7 @@ Django settings for konservativt project.
 from pathlib import Path
 import os
 
+# --- Logging ---
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -12,13 +13,10 @@ LOGGING = {
         "console": {"class": "logging.StreamHandler"},
     },
     "loggers": {
-        # våre filer members/signals.py og members/notifications.py bruker __name__
         "members": {"handlers": ["console"], "level": "INFO"},
-        # få med Django-request feil også (nyttig for 500)
         "django.request": {"handlers": ["console"], "level": "ERROR"},
     },
 }
-
 
 def _env_bool(name: str, default: bool = False) -> bool:
     val = os.environ.get(name)
@@ -26,8 +24,9 @@ def _env_bool(name: str, default: bool = False) -> bool:
         return default
     return str(val).strip().lower() in {"1", "true", "yes", "on"}
 
+# --- Epost ---
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.zmx.no")           # sett fornuftige default
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.zmx.no")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
@@ -37,13 +36,12 @@ EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "20"))
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "bn@zc.no")
 SERVER_EMAIL = os.environ.get("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 
-
 # --- Paths ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# --- .env (valgfritt, anbefalt i prod) ---
+# --- .env (valgfritt) ---
 try:
-    from dotenv import load_dotenv  # pip install python-dotenv
+    from dotenv import load_dotenv
     load_dotenv(BASE_DIR / ".env")
 except Exception:
     pass
@@ -51,18 +49,21 @@ except Exception:
 # --- Security / Debug ---
 SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY",
-    "django-insecure-change-me"  # bytt i .env i prod
+    "django-insecure-change-me"
 )
 DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
 
 ALLOWED_HOSTS = ["q1.no", "www.q1.no", "127.0.0.1", "localhost"]
-CSRF_TRUSTED_ORIGINS = ["https://q1.no", "https://www.q1.no"]
 
-
-STATICFILES_DIRS = [
-    BASE_DIR / "konservativt" / "static",
+CSRF_TRUSTED_ORIGINS = [
+    "https://q1.no",
+    "https://www.q1.no",
 ]
 
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 # --- Apps ---
 INSTALLED_APPS = [
@@ -72,12 +73,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    
+
     # Dine apper
     "docs",
     "access",
-    "geo", 
-#    "members",
+    "geo",
+    "mailings.apps.MailingsConfig",
     "audit",
     "sentral",
     "fylkehub",
@@ -92,9 +93,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-     'audit.middleware.PageViewMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "audit.middleware.PageViewMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 # --- URLs / WSGI ---
@@ -105,7 +106,7 @@ WSGI_APPLICATION = "konservativt.wsgi.application"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],  # dine templates
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -117,7 +118,7 @@ TEMPLATES = [
     },
 ]
 
-# --- Database (MySQL) ---
+# --- Database ---
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
@@ -135,45 +136,31 @@ DATABASES = {
 }
 
 # --- Auth / Redirects ---
-LOGIN_URL = "/konservativt/accounts/login/"
-LOGOUT_REDIRECT_URL = "/konservativt/"
-LOGIN_REDIRECT_URL = "/konservativt/"         # eller "/konservativt/sentral/" hvis du vil
+LOGIN_URL = "/admin/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
+
 # --- I18N / TZ ---
 LANGUAGE_CODE = "nb"
 TIME_ZONE = "Europe/Oslo"
 USE_I18N = True
 USE_TZ = True
 
-# --- Kjører under URL-prefiks /konservativt ---
-# Nginx STRIPPER prefiks (proxy_pass ...9071/;), men vi vil at reverserte lenker skal ha /konservativt
-# FORCE_SCRIPT_NAME = "/konservativt"
-
 # --- Static / Media ---
-STATIC_URL = "/konservativt/static/"
-MEDIA_URL = "/konservativt/media/"
-STATIC_ROOT = "/srv/konservativt/static/"
-MEDIA_ROOT = BASE_DIR / "media"
+STATIC_URL = "/static/"
+STATIC_ROOT = "/srv/konservativt/static"
 
-# --- Proxy / sikkerhet ---
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-CSRF_TRUSTED_ORIGINS = [
-    "https://q1.no",
-    "https://www.q1.no",
-]
-
-# --- Unngå cookie-kollisjon med annen app på samme domene ---
-SESSION_COOKIE_NAME = "konservativt_sessionid"
-CSRF_COOKIE_NAME = "konservativt_csrftoken"
-SESSION_COOKIE_PATH = "/konservativt"
-CSRF_COOKIE_PATH = "/konservativt"
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+MEDIA_URL = "/media/"
+MEDIA_ROOT = "/srv/konservativt/media"
 
 # --- Default PK ---
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# --- safety patch: ensure 'audit' (not 'membersaudit') ---
+# --- Safety patch ---
 INSTALLED_APPS = [a for a in INSTALLED_APPS if a != "membersaudit"]
 if "audit" not in INSTALLED_APPS:
     INSTALLED_APPS.append("audit")
+
+# Mailings – struping/batch
+MAILINGS_BATCH_SIZE = 200
+MAILINGS_MAX_PER_MINUTE = 120
