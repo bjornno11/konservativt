@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+####=== KONFIGURASJON ==============================================
+# Kataloger / navn – tilpass ved behov
+PROJECT_DIR="/home/bjornno11/q1.no/konservativt"
+BACKUP_DIR="$HOME/backups/konservativt"
+
+# Database – tilpass til din DB
+DB_NAME="bjornno11_django_medlem"
+DB_USER="bjornno11"
+DB_HOST="localhost"          # ev. endre
+DB_CLI="mariadb-dump"           # eller "pg_dump" for Postgres
+
+# Filer utenfor prosjektet som er lurt å ta kopi av
+NGINX_FILES=(
+  "/etc/nginx/conf.d/konservativt.conf"
+)
+SYSTEMD_FILES=(
+  "/etc/systemd/system/gunicorn.service"
+  "/etc/systemd/system/gunicorn-konservativt.service"
+)
+
+# Rotasjon (antall sett du vil beholde)
+RETAIN=14
+
+# Valgfritt: push til git-remote
+PUSH_REMOTE=false   # sett true hvis du vil pushe commit/tag
+GIT_REMOTE="origin"
+GIT_BRANCH="main"
+####===============================================================
+
+DATE="$(date +%Y%m%d-%H%M%S)"
+HOST="$(hostname -s)"
+DEST_DIR="$BACKUP_DIR/$DATE"
+LOG="$BACKUP_DIR/backup-$DATE.log"
+
+mkdir -p "$DEST_DIR"
+exec > >(tee -a "$LOG") 2>&1
+
+echo "==> Starter backup $DATE på $HOST"
+echo "    Prosjekt: $PROJECT_DIR"
+echo "    Backup til: $DEST_DIR"
+
+# Små helper-funksjoner
+need() { command -v "$1" >/dev/null 2>&1 || { echo "Mangler kommando: $1"; exit 1; }; }
+sha() { command -v sha256sum >/dev/null 2>&1 && sha256sum "$1" > "$1.sha256" || shasum -a 256 "$1" > "$1.sha256"; }
+
+# Sjekk verktøy
+need tar
+need gzip
+need git
+
+# 1) Git-snapshot (commit + valgfri tag)
+echo "==> Git-snapshot"
+pushd "$PROJECT_DIR" >/dev/null
+
+# Ta med eventuelle lokale endringer i snapshot (skader ikke hvis ingen endringer)
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  git add -A
+  git commit -m "Backup snapshot $DATE"
+else
+  echo "    Ingen endringer å committe."
+fi
+
+GIT_SHA="$(git rev-parse --short HEAD)"
+TAG="backup-$DATE-$GIT_SHA"
+
+# Lag en lett gjenkjennbar tag (ikke farlig om den finnes)
+if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+  git tag -a "$TAG" -m "Backup tag $DATE ($GIT_SHA)"
+fi
+
+if [ "$PUSH_REMOTE" = true ]; then
+  need git
+  echo "    Pusher commit og tag til $GIT_REMOTE/$GIT_BRANCH"
+  git push "$GIT_REMOTE" "$GIT_BRANCH" || true
+  git push "$GIT_REMOTE" --tags || true
+fi
+
+popd >/dev/null
+
+# 2) Prosjekt-tarball (uten .venv, __pycache__, .git og store greier)
+echo "==> Lager prosjekt-arkiv (tar.gz)"
+PROJ_TAR="$DEST_DIR/project-$HOST-$DATE-$GIT_SHA.tgz"
+tar \
+  --exclude="$PROJECT_DIR/.venv" \
+  --exclude="$PROJECT_DIR/.git" \
+  --exclude="__pycache__" \
+  -C "$(dirname "$PROJECT_DIR")" \
+  -czf "$PROJ_TAR" "$(basename "$PROJECT_DIR")"
+sha "$PROJ_TAR"
+
+# 3) Database-dump
+echo "==> Database-dump ($DB_CLI)"
+DB_DUMP_RAW="$DEST_DIR/db-$HOST-$DATE.sql"
+DB_DUMP_GZ="$DB_DUMP_RAW.gz"
+
+if [ "$DB_CLI" = "mariadb-dump" ]; then
+  need mariadb-dump
+  # Spør etter passord interaktivt dersom ikke satt i .my.cnf
+  mariadb-dump -h "$DB_HOST" -u "$DB_USER" -p "$DB_NAME" > "$DB_DUMP_RAW"
+elif [ "$DB_CLI" = "pg_dump" ]; then
+  need pg_dump
+  # For Postgres: bruk PGPASSWORD env eller .pgpass
+  pg_dump -h "$DB_HOST" -U "$DB_USER" "$DB_NAME" > "$DB_DUMP_RAW"
+else
+  echo "Ukjent DB_CLI: $DB_CLI"; exit 1;
+fi
+
+gzip -9 "$DB_DUMP_RAW"
+sha "$DB_DUMP_GZ"
+
+# 4) Konfig-filer (Nginx + systemd)
+echo "==> Kopierer Nginx & systemd-filer"
+CONF_DIR="$DEST_DIR/config"
+mkdir -p "$CONF_DIR/nginx" "$CONF_DIR/systemd"
+
+for f in "${NGINX_FILES[@]}"; do
+  [ -f "$f" ] && install -m 0644 "$f" "$CONF_DIR/nginx/" || echo "    (hopper over: $f finnes ikke)"
+done
+for f in "${SYSTEMD_FILES[@]}"; do
+  [ -f "$f" ] && install -m 0644 "$f" "$CONF_DIR/systemd/" || echo "    (hopper over: $f finnes ikke)"
+done
+
+# 5) Mini-manifest
+echo "==> Skriver manifest"
+cat > "$DEST_DIR/manifest.txt" <<EOF
+Backup-dato : $DATE
+Host        : $HOST
+Prosjekt    : $PROJECT_DIR
+Git SHA     : $GIT_SHA
+Git tag     : $TAG
+DB          : $DB_NAME ($DB_CLI@$DB_HOST som $DB_USER)
+Filer:
+  $(basename "$PROJ_TAR")
+  $(basename "$DB_DUMP_GZ")
+Konfig:
+  nginx:   ${NGINX_FILES[*]:-ingen}
+  systemd: ${SYSTEMD_FILES[*]:-ingen}
+EOF
+
+# 6) Rotasjon – behold kun de siste $RETAIN settene
+echo "==> Rotasjon (beholder $RETAIN siste)"
+cd "$BACKUP_DIR"
+ls -1dt */ 2>/dev/null | tail -n +$((RETAIN+1)) | xargs -r -I{} rm -rf "{}"
+
+echo "==> Ferdig. Backup ligger i: $DEST_DIR"
