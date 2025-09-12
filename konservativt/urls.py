@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from django.contrib.auth.views import LoginView, LogoutView
 from konservativt.views import Home, MyLoginView
+from django.views.generic.base import RedirectView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -24,6 +25,8 @@ urlpatterns = [
     path("", include("sentral.router_urls")),       # ← NY: post-login router (forklart under)
     path("fylke/", include(("fylkehub.urls", "fylkehub"), namespace="fylkehub")),
     path("lag/", include(("laghub.urls", "laghub"), namespace="laghub")),
+    path("konservativt/members/join/", RedirectView.as_view(url="/members/join/", permanent=True)),
+
 ]
 
 # Kun i DEBUG: serve media (ev. static) fra Django
