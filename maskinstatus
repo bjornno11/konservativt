@@ -1,0 +1,1 @@
+echo "CPU:" && lscpu | grep -E 'Model name|^CPU\(s\)|Thread|Core' && echo && echo "RAM:" && free -h | grep -E 'Mem|Swap' && echo && echo "Disk:" && df -h --total | grep total
