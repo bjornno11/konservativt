@@ -16,3 +16,6 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+konservativt_dump.sql
+static/logo.png
+static/img/favicon.ico
