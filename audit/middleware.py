@@ -1,6 +1,6 @@
 from .models import PageView
 
-EXCLUDE_PREFIXES = ("/konservativt/static/", "/konservativt/media/")
+EXCLUDE_PREFIXES = ("/static/", "/konservativt/media/")
 
 class PageViewMiddleware:
     def __init__(self, get_response):

@@ -4,6 +4,11 @@ Django settings for konservativt project.
 
 from pathlib import Path
 import os
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+STATIC_URL = "/static/"
+STATICFILES_DIRS = [ BASE_DIR / "static" ]     # kilde
+STATIC_ROOT = BASE_DIR / "staticfiles"         # mål for collectstatic
 
 # --- Logging ---
 LOGGING = {
@@ -123,7 +128,7 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": os.getenv("DB_NAME", "konservativt"),
-        "USER": os.getenv("DB_USER", "konservativt"),
+        "USER": os.getenv("DB_USER", "bjornno11"),
         "PASSWORD": os.getenv("DB_PASSWORD", "Tula-2012"),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "3306"),
@@ -147,8 +152,6 @@ USE_I18N = True
 USE_TZ = True
 
 # --- Static / Media ---
-STATIC_URL = "/static/"
-STATIC_ROOT = "/srv/konservativt/static"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = "/srv/konservativt/media"
