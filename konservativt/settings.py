@@ -81,10 +81,8 @@ INSTALLED_APPS = [
 
     # Dine apper
     "docs",
-    "access",
     "geo",
     "mailings.apps.MailingsConfig",
-    "audit",
     "sentral",
     "fylkehub",
     "laghub",
@@ -98,7 +96,6 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "audit.middleware.PageViewMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -159,10 +156,6 @@ MEDIA_ROOT = "/srv/konservativt/media"
 # --- Default PK ---
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# --- Safety patch ---
-INSTALLED_APPS = [a for a in INSTALLED_APPS if a != "membersaudit"]
-if "audit" not in INSTALLED_APPS:
-    INSTALLED_APPS.append("audit")
 
 # Mailings – struping/batch
 MAILINGS_BATCH_SIZE = 200

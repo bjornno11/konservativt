@@ -1,10 +1,10 @@
-from django.db import models
 
 # Create your models here.
 # f.eks. people/models.py
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
+from members.models import Medlem, Fylkeslag, Lokallag
 
 class Medlem(models.Model):
     fornavn   = models.CharField("Fornavn", max_length=100)
@@ -18,36 +18,50 @@ class Medlem(models.Model):
 
 User = get_user_model()
 
-class DocFolder(models.Model):
+# app: docs/models.py
+
+class Dokument(models.Model):
+    LAGTYPE_VALG = [
+        ("sentral", "Sentralstyret"),
+        ("fylke", "Fylkeslag"),
+        ("lokal", "Lokallag"),
+    ]
+
     navn = models.CharField(max_length=200)
     beskrivelse = models.TextField(blank=True)
-    opprettet_av = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    fil = models.FileField(upload_to="dokumenter/%Y/%m/")
+    opplastet_av = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    lagtype = models.CharField(max_length=10, choices=LAGTYPE_VALG)
+    lag_id = models.PositiveIntegerField()        # peker til Fylkeslag.id eller Lokallag.id
     opprettet = models.DateTimeField(auto_now_add=True)
-
-    # NYTT: ACL per mappe
-    can_read = models.ManyToManyField(Group, blank=True, related_name="docfolders_can_read", verbose_name="Kan lese (grupper)")
-    can_write = models.ManyToManyField(Group, blank=True, related_name="docfolders_can_write", verbose_name="Kan laste opp (grupper)")
+    endret = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Mappe"
-        verbose_name_plural = "Mapper"
-        ordering = ["navn"]
+        ordering = ["-opprettet"]
 
     def __str__(self):
         return self.navn
 
-class Document(models.Model):
-    folder = models.ForeignKey(DocFolder, on_delete=models.CASCADE, related_name="docs")
-    tittel = models.CharField(max_length=255)
-    fil = models.FileField(upload_to="docs/%Y/%m/")
-    merknad = models.TextField(blank=True)
-    opprettet_av = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+
+class Mappe(models.Model):
+    navn = models.CharField(max_length=100)
+    lagtype = models.CharField(max_length=10, choices=Dokument.LAGTYPE_VALG)
+    lag_id = models.PositiveIntegerField()
     opprettet = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.navn
+
+
+class Endring(models.Model):
+    dokument = models.ForeignKey(Dokument, on_delete=models.CASCADE, related_name="endringer")
+    endret_av = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    dato = models.DateTimeField(auto_now_add=True)
+    beskrivelse = models.CharField(max_length=255, blank=True)
+    gammel_fil = models.FileField(upload_to="dokumenter/arkiv/%Y/%m/", blank=True, null=True)
+
     class Meta:
-        verbose_name = "Dokument"
-        verbose_name_plural = "Dokumenter"
-        ordering = ["-opprettet"]
+        ordering = ["-dato"]
 
     def __str__(self):
-        return self.tittel
+        return f"{self.dokument.navn} endret {self.dato:%Y-%m-%d}"

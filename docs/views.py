@@ -4,13 +4,13 @@ from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.http import Http404, FileResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Document, DocFolder
+from .models import Dokument, Mappe
 from .permissions import user_has_doc_perm, user_has_folder_perm
 from django.http import Http404
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 
 class DocumentList(LoginRequiredMixin, ListView):
-    model = Document
+    model = Dokument
     template_name = "docs/list.html"
     context_object_name = "docs"
     paginate_by = 25
@@ -32,7 +32,7 @@ class DocumentList(LoginRequiredMixin, ListView):
 
 
 class DocumentDetail(LoginRequiredMixin, DetailView):
-    model = Document
+    model = Dokument
     template_name = "docs/detail.html"
     context_object_name = "doc"
 
@@ -43,7 +43,7 @@ class DocumentDetail(LoginRequiredMixin, DetailView):
         return obj
 
 class DocumentCreate(LoginRequiredMixin, CreateView):
-    model = Document
+    model = Dokument
     fields = ["folder", "tittel", "fil", "merknad"]
     template_name = "docs/form.html"
 
@@ -63,7 +63,7 @@ class DocumentCreate(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
 class DocumentUpdate(LoginRequiredMixin, UpdateView):
-    model = Document
+    model = Dokument
     fields = ["folder", "tittel", "fil", "merknad"]
     template_name = "docs/form.html"
 
@@ -74,7 +74,7 @@ class DocumentUpdate(LoginRequiredMixin, UpdateView):
         return obj
 
 class DocumentDelete(LoginRequiredMixin, DeleteView):
-    model = Document
+    model = Dokument
     template_name = "docs/delete.html"
     success_url = "/docs/"
 
